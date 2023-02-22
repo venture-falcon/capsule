@@ -1,0 +1,28 @@
+name: publish
+on:
+  release:
+    types:
+      - released
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK 17
+        uses: actions/setup-java@v2
+        with:
+          java-version: '17'
+          distribution: 'adopt'
+          architecture: x64
+      - name: Run tests
+        run: make test
+      - name: Publish to GitHub package registry
+        run: ./gradlew publish -PversionId=${{ github.event.release.tag_name }}
+        env:
+          GPR_USER: ${{ secrets.GPR_USER }}
+          GPR_TOKEN: ${{ secrets.GPR_TOKEN }}
