@@ -14,4 +14,4 @@ jobs:
           distribution: 'adopt'
           architecture: x64
       - name: Run tests
-        run: make test
+        run: ./gradlew test
