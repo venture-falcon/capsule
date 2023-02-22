@@ -2,9 +2,6 @@
 *.class
 lib/build
 
-# Gradle stuff to ignore
-.gradle
-
 # Log file
 *.log
 
@@ -28,3 +25,7 @@ hs_err_pid*
 
 # IDE project files
 .idea
+
+# Gradle
+.gradle
+!gradle/wrapper/gradle-wrapper.jar
