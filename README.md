@@ -100,3 +100,74 @@ but when we use `register(ClientImpl::class.java)` we are saying that only
 
 This may be useful if you have a class that implements many interfaces, and for some reason you only
 want capsule to consider it for one or some of those interfaces.
+
+It is also possible to combine several capsules. For example, you might have a capsule with "common"
+dependencies which will always be used regardless of context, and then there might be a test capsule
+that contains mocks or dependencies which you only wants to use when running tests.
+
+This can be setup like this
+```kotlin
+val common = Capsule {
+    // Register dependencies that will be used in all contexts
+}
+
+val primary = Capsule(common) {
+    // Register dependencies that will only be used in live environment
+    // These dependencies can in turn depend on dependencies which were set up in the common capsule 
+}
+
+val test = Capsule(common) {
+    // Register dependencies which you may only want to use in tests. This should preferably
+    // be set up in such way that it cannot be accessible from your regular code, only be your tests
+}
+```
+
+Sometimes you need all implementations of an interfaces. For such cases you can use `getMany`.
+
+```kotlin
+interface Greeter
+class Foo : Greeter
+class Bar : Greeter
+
+val capsule = Capsule {
+    register { Foo() }
+    register { Bar() }
+}
+
+fun main() {
+    val greeters: List<Greeter> = capsule.getMany()
+}
+```
+
+## Gradle Dependency
+Add this to your build.gradle(.kts)
+```kotlin
+repositories {
+    // Add this as a repository
+    github("venture-falcon/capsule")
+}
+
+// This is needed to be able to access artifacts published on GitHub
+// See also https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-gradle-registry#using-a-published-package
+fun RepositoryHandler.github(vararg repos: String) {
+    repos.forEach { repo ->
+        maven {
+            name = "GithubPackages"
+            url = uri("https://maven.pkg.github.com/$repo")
+            credentials {
+                username = requireNotNull(System.getenv("GPR_USER")) {
+                    "Found no username for GitHub packages access"
+                }
+                password = requireNotNull(System.getenv("GPR_TOKEN")) {
+                    "Found no token for GitHub packages access"
+                }
+            }
+        }
+    }
+}
+
+dependencies {
+    // Then add this to you dependencies block, and make sure to set a proper version number
+    implementation("io.nexure:capsule:VERSION_NUMBER")
+}
+```
