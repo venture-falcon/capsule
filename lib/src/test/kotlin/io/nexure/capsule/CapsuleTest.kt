@@ -111,6 +111,25 @@ class CapsuleTest {
         assertEquals("This is live", main.get<Service>().greet())
         assertEquals("This is test", test.get<Service>().greet())
     }
+
+    @Test
+    fun `test getMany for resolving multiple implementation of an interface`() {
+        class Foo : Greeter {
+            override fun hello(): String = "foo"
+        }
+
+        class Bar : Greeter {
+            override fun hello(): String = "bar"
+        }
+
+        val capsule = Capsule {
+            register { Foo() }
+            register { Bar() }
+        }
+
+        val greeters: List<Greeter> = capsule.getMany()
+        assertEquals(2, greeters.size)
+    }
 }
 
 interface Greeter {
