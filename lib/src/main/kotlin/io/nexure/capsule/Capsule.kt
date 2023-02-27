@@ -34,10 +34,8 @@ private constructor(
 
     fun <T : Any> getMany(clazz: Class<T>): List<T> {
         val key: String = classKey(clazz)
-        println("Looking for $key")
         return dependencies
-            .filter { (it.key == key).also { bool -> println("${it.key} == $key => $bool") } }
-            .onEach { "Found match ${it.key}" }
+            .filter { (it.key == key) }
             .map { it.getInstance() as T }.toList()
     }
 
