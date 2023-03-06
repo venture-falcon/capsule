@@ -59,9 +59,9 @@ private constructor(
 
     companion object {
         operator fun invoke(vararg parents: Capsule, config: Configuration.() -> Unit): Capsule {
-            val dependencies: List<Dependency> = parents.map { it.dependencies }.flatten()
-            val moduleConfig = Configuration().apply(config)
-            return Capsule(moduleConfig.dependencies + dependencies)
+            val dependencies: LinkedList<Dependency> = parents.map { it.dependencies }.flatten().let { LinkedList(it) }
+            val moduleConfig = Configuration(dependencies).apply(config)
+            return Capsule(moduleConfig.dependencies)
         }
     }
 }

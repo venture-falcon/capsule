@@ -80,7 +80,7 @@ class CapsuleTest {
 
     @Test
     fun `test with multiple combined capsules`() {
-        class Serializer()
+        class Serializer(val version: Int)
         class Service(val greeter: Greeter, val serializer: Serializer) {
             fun greet(): String = greeter.hello()
         }
@@ -95,7 +95,7 @@ class CapsuleTest {
 
         val common = Capsule {
             // This dependency is used in both live code and test
-            register { Serializer() }
+            register { Serializer(1) }
         }
 
         val main = Capsule(common) {
