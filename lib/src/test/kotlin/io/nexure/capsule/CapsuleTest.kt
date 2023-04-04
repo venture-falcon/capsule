@@ -130,6 +130,37 @@ class CapsuleTest {
         val greeters: List<Greeter> = capsule.getMany()
         assertEquals(2, greeters.size)
     }
+
+    @Test
+    fun `test implicit inherited priority`() {
+        val first = Capsule {
+            register<Greeter> {
+                object : Greeter {
+                    override fun hello(): String = "1"
+                }
+            }
+        }
+
+        val second = Capsule(first) {
+            register<Greeter> {
+                object : Greeter {
+                    override fun hello(): String = "2"
+                }
+            }
+        }
+
+        val third = Capsule(second) {
+            register<Greeter> {
+                object : Greeter {
+                    override fun hello(): String = "3"
+                }
+            }
+        }
+
+        val greeter: Greeter = third.get()
+        assertEquals("3", greeter.hello())
+        assertEquals(listOf("3", "2", "1"), third.getMany<Greeter>().map { it.hello() })
+    }
 }
 
 interface Greeter {
