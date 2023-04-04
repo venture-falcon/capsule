@@ -45,18 +45,18 @@ private constructor(
 
     class Configuration
     internal constructor(
-        val priority: Int,
+        private val priority: Int,
         internal val dependencies: LinkedList<Dependency>,
     ) : Capsule(priority, dependencies) {
-        inline fun <reified T : Any> register(priority: Int = this.priority, noinline setup: () -> T) {
+        inline fun <reified T : Any> register(noinline setup: () -> T) {
             val clazz: Class<T> = T::class.java
-            register(clazz, priority, setup)
+            register(clazz, setup)
             clazz.interfaces.forEach {
-                register(it, priority, setup)
+                register(it, setup)
             }
         }
 
-        fun <T : Any> register(clazz: Class<out T>, priority: Int = DEFAULT_PRIORITY, setup: () -> T) {
+        fun <T : Any> register(clazz: Class<out T>, setup: () -> T) {
             val dependency = Dependency.fromClass(clazz, priority, setup)
             dependencies.push(dependency)
         }
