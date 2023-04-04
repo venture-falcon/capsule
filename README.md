@@ -118,9 +118,35 @@ val primary = Capsule(common) {
 
 val test = Capsule(common) {
     // Register dependencies which you may only want to use in tests. This should preferably
-    // be set up in such way that it cannot be accessible from your regular code, only be your tests
+    // be set up in such way that it cannot be accessible from your regular code, only by your tests
 }
 ```
+
+Dependencies in a child module will always have higher priority than dependencies in a parent module.
+
+```kotlin
+import java.time.Clock
+import java.time.Instant
+
+val parent = Capsule {
+    register<Clock> {
+        Clock.systemUTC()
+    }
+}
+
+val child = Capsule(parent) {
+    // This Clock will have priority over the Clock registered in the parent
+    register<Clock> {
+        Clock.fixed(Instant.EPOCH)
+    }
+}
+
+// This will always return the Clock that returns an `Instant.EPOCH`
+val clock: Clock = child.get()
+```
+
+This means that it is possible to register all your "real" dependencies in one module and then only override the ones
+that needs to be different in tests with other implementations.
 
 Sometimes you need all implementations of an interfaces. For such cases you can use `getMany`.
 

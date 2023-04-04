@@ -3,12 +3,15 @@ package io.nexure.capsule
 import java.lang.reflect.Constructor
 import java.util.LinkedList
 
+private const val DEFAULT_PRIORITY: Int = Int.MAX_VALUE
+
 @Suppress("UNCHECKED_CAST")
 open class Capsule
 private constructor(
+    private val priority: Int = DEFAULT_PRIORITY,
     private val dependencies: List<Dependency> = LinkedList()
 ) {
-    constructor(): this(LinkedList())
+    constructor(): this(Int.MAX_VALUE, LinkedList())
 
     inline fun <reified T : Any> get(): T = get(T::class.java)
     inline fun <reified T : Any> tryGet(): T? = tryGet(T::class.java)
@@ -36,32 +39,39 @@ private constructor(
         val key: String = classKey(clazz)
         return dependencies
             .filter { (it.key == key) }
+            .sorted()
             .map { it.getInstance() as T }.toList()
     }
 
     class Configuration
     internal constructor(
-        internal val dependencies: LinkedList<Dependency> = LinkedList()
-    ) : Capsule(dependencies) {
-        inline fun <reified T : Any> register(noinline setup: () -> T) {
+        val priority: Int,
+        internal val dependencies: LinkedList<Dependency>,
+    ) : Capsule(priority, dependencies) {
+        inline fun <reified T : Any> register(priority: Int = this.priority, noinline setup: () -> T) {
             val clazz: Class<T> = T::class.java
-            register(clazz, setup)
+            register(clazz, priority, setup)
             clazz.interfaces.forEach {
-                register(it, setup)
+                register(it, priority, setup)
             }
         }
 
-        fun <T : Any> register(clazz: Class<out T>, setup: () -> T) {
-            val dependency = Dependency.fromClass(clazz, setup)
+        fun <T : Any> register(clazz: Class<out T>, priority: Int = DEFAULT_PRIORITY, setup: () -> T) {
+            val dependency = Dependency.fromClass(clazz, priority, setup)
             dependencies.push(dependency)
         }
     }
 
     companion object {
-        operator fun invoke(vararg parents: Capsule, config: Configuration.() -> Unit): Capsule {
+        operator fun invoke(
+            vararg parents: Capsule,
+            config: Configuration.() -> Unit
+        ): Capsule {
             val dependencies: LinkedList<Dependency> = parents.map { it.dependencies }.flatten().let { LinkedList(it) }
-            val moduleConfig = Configuration(dependencies).apply(config)
-            return Capsule(moduleConfig.dependencies)
+            val parentsPriority: Int = parents.minOfOrNull { it.priority } ?: DEFAULT_PRIORITY
+            val priority: Int = parentsPriority - 1
+            val moduleConfig = Configuration(priority, dependencies).apply(config)
+            return Capsule(priority, moduleConfig.dependencies)
         }
     }
 }
@@ -69,17 +79,20 @@ private constructor(
 internal class Dependency
 private constructor(
     val key: String,
+    val priority: Int,
     constructor: () -> Any,
-) {
+): Comparable<Dependency> {
     private val instance: LazyValue<Any> = LazyValue(constructor)
 
     fun getInstance(): Any = instance()
 
     override fun toString(): String = key
 
+    override fun compareTo(other: Dependency): Int = this.priority.compareTo(other.priority)
+
     companion object {
-        fun fromClass(clazz: Class<*>, constructor: () -> Any): Dependency {
-            return Dependency(key = classKey(clazz), constructor = constructor)
+        fun fromClass(clazz: Class<*>, priority: Int, constructor: () -> Any): Dependency {
+            return Dependency(key = classKey(clazz), priority = priority, constructor = constructor)
         }
     }
 }
