@@ -17,7 +17,7 @@ private constructor(
     inline fun <reified T : Any> tryGet(): T? = tryGet(T::class.java)
 
     fun <T : Any> tryGet(clazz: Class<T>): T? =
-        getMany(clazz).firstOrNull() ?: resolveImplicit(clazz)
+        getDependencies(clazz).firstOrNull()?.let { it.getInstance() as T } ?: resolveImplicit(clazz)
 
     fun <T : Any> get(clazz: Class<T>): T =
         tryGet(clazz) ?: throw DependencyException(clazz)
@@ -35,12 +35,11 @@ private constructor(
 
     inline fun <reified T : Any> getMany(): List<T> = getMany(T::class.java)
 
-    fun <T : Any> getMany(clazz: Class<T>): List<T> {
+    fun <T : Any> getMany(clazz: Class<T>): List<T> = getDependencies(clazz).map { it.getInstance() as T }
+
+    private fun <T: Any> getDependencies(clazz: Class<T>): List<Dependency> {
         val key: String = classKey(clazz)
-        return dependencies
-            .filter { (it.key == key) }
-            .sorted()
-            .map { it.getInstance() as T }.toList()
+        return dependencies.filter { (it.key == key) }.sorted()
     }
 
     class Configuration

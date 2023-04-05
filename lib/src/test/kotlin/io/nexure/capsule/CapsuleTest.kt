@@ -161,6 +161,27 @@ class CapsuleTest {
         assertEquals("3", greeter.hello())
         assertEquals(listOf("3", "2", "1"), third.getMany<Greeter>().map { it.hello() })
     }
+
+
+    @Test
+    fun `test only needed dependency in created on call to get()`() {
+        val parent = Capsule {
+            register<Greeter> {
+                error("This should not be invoked")
+            }
+        }
+
+        val child = Capsule(parent) {
+            register<Greeter> {
+                object : Greeter {
+                    override fun hello(): String = "foo"
+                }
+            }
+        }
+
+        val greeter: Greeter = child.get()
+        assertEquals("foo", greeter.hello())
+    }
 }
 
 interface Greeter {
