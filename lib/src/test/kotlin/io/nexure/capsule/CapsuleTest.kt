@@ -3,6 +3,7 @@ package io.nexure.capsule
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class CapsuleTest {
     @Test
@@ -162,7 +163,6 @@ class CapsuleTest {
         assertEquals(listOf("3", "2", "1"), third.getMany<Greeter>().map { it.hello() })
     }
 
-
     @Test
     fun `test only needed dependency in created on call to get()`() {
         val parent = Capsule {
@@ -181,6 +181,25 @@ class CapsuleTest {
 
         val greeter: Greeter = child.get()
         assertEquals("foo", greeter.hello())
+    }
+
+    @Test
+    fun `DependencyException should provide context on which class creation that failed`() {
+        class ComplexGreeter(
+            val string: String,
+            val double: Double
+        ) : Greeter {
+            override fun hello(): String = "foo"
+        }
+
+        val capsule = Capsule {}
+        try {
+            val g = capsule.get<ComplexGreeter>()
+            assertTrue(false)
+        } catch (e: DependencyException) {
+            assertEquals("double", e.rootKey())
+            assertEquals("Unable to provide dependency for class double", e.message)
+        }
     }
 }
 

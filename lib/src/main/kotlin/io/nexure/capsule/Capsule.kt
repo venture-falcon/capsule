@@ -83,7 +83,13 @@ private constructor(
 ): Comparable<Dependency> {
     private val instance: LazyValue<Any> = LazyValue(constructor)
 
-    fun getInstance(): Any = instance()
+    fun getInstance(): Any {
+        return try {
+            instance()
+        } catch (e: Exception) {
+            throw DependencyException(key, e)
+        }
+    }
 
     override fun toString(): String = key
 
@@ -99,12 +105,11 @@ private constructor(
 private fun classKey(clazz: Class<*>): String = clazz.canonicalName ?: clazz.descriptorString()
 
 internal class DependencyException(
-    val clazz: Class<*>,
-    override val cause: DependencyException? = null
+    val key: String,
+    override val cause: Exception? = null
 ) : Exception() {
-    override val message: String = if (cause != null) {
-        "Unable to provide dependency for class $clazz: \n\t${cause.message}"
-    } else {
-        "Unable to provide dependency for class $clazz"
-    }
+    constructor(clazz: Class<*>, cause: Exception? = null) : this(classKey(clazz), cause)
+
+    override val message: String = "Unable to provide dependency for class ${rootKey()}"
+    fun rootKey(): String = if (this.cause is DependencyException) this.cause.key else this.key
 }
