@@ -185,23 +185,43 @@ class CapsuleTest {
 
     @Test
     fun `DependencyException should provide context on which class creation that failed`() {
-        class ComplexGreeter(
-            val string: String,
-            val double: Double
-        ) : Greeter {
-            override fun hello(): String = "foo"
-        }
-
-        val capsule = Capsule {}
         try {
-            val g = capsule.get<ComplexGreeter>()
+            val capsule = Capsule {}
+            capsule.get<GrandParent>()
             assertTrue(false)
         } catch (e: DependencyException) {
-            assertEquals("double", e.rootKey())
-            assertEquals("Unable to provide dependency for class double", e.message)
+            val expected = listOf(
+                "io.nexure.capsule.GrandParent",
+                "io.nexure.capsule.Parent",
+                "io.nexure.capsule.Child",
+                "double"
+            )
+            assertEquals(expected, e.children())
+        }
+    }
+
+    @Test
+    fun `DependencyException should provide context on which class creation that failed from first missing class`() {
+        try {
+            val capsule = Capsule {
+                GrandParent(get())
+            }
+            capsule.get<GrandParent>()
+            assertTrue(false)
+        } catch (e: DependencyException) {
+            val expected = listOf(
+                "io.nexure.capsule.Parent",
+                "io.nexure.capsule.Child",
+                "double"
+            )
+            assertEquals(expected, e.children())
         }
     }
 }
+
+class Child(val double: Double)
+class Parent(val child: Child)
+class GrandParent(val parent: Parent)
 
 interface Greeter {
     fun hello(): String

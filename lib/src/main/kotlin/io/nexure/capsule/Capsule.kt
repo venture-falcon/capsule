@@ -110,6 +110,14 @@ internal class DependencyException(
 ) : Exception() {
     constructor(clazz: Class<*>, cause: Exception? = null) : this(classKey(clazz), cause)
 
-    override val message: String = "Unable to provide dependency for class ${rootKey()}"
-    fun rootKey(): String = if (this.cause is DependencyException) this.cause.key else this.key
+    fun children(): List<String> {
+        val childClasses: List<String> =
+            if (cause is DependencyException) cause.children() else emptyList()
+
+        return listOf(key) + childClasses
+    }
+
+    override val message: String =
+        "Unable to provide dependency for class, " +
+            "since no explicit implementation was registered in chain: ${children()}"
 }
