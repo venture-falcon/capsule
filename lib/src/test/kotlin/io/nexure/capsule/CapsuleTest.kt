@@ -2,6 +2,7 @@ package io.nexure.capsule
 
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFails
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -216,6 +217,14 @@ class CapsuleTest {
             )
             assertEquals(expected, e.children())
         }
+    }
+
+    @Test
+    fun `should not try to automatically instantiate implicit forbidden classes`() {
+        data class StringWrapper(val foo: String)
+        val capsule = Capsule()
+        val exception: Throwable = assertFails { capsule.get<StringWrapper>() }
+        assertTrue(exception is DependencyException)
     }
 }
 

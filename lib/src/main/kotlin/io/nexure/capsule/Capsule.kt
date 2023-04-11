@@ -23,6 +23,9 @@ private constructor(
         tryGet(clazz) ?: throw DependencyException(clazz)
 
     private fun <T : Any> resolveImplicit(clazz: Class<T>): T? {
+        if (clazz in forbiddenImplicit) {
+            return null
+        }
         val constructor: Constructor<*> =
             clazz.constructors.minByOrNull { it.parameterCount } ?: return null
         val parameters: Array<*> = try {
@@ -62,6 +65,16 @@ private constructor(
     }
 
     companion object {
+        /**
+         * These are classes which should never be implicitly instantiated by using an automatically resolved
+         * constructor, since this is almost certainly an oversight and an error.
+         */
+        private val forbiddenImplicit: Set<Class<*>> = setOf(
+            String::class.java,
+            ByteArray::class.java,
+            Array::class.java
+        )
+
         operator fun invoke(
             vararg parents: Capsule,
             config: Configuration.() -> Unit
