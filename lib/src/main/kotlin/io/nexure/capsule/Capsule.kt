@@ -79,7 +79,12 @@ private constructor(
             vararg parents: Capsule,
             config: Configuration.() -> Unit
         ): Capsule {
-            val dependencies: LinkedList<Dependency> = parents.map { it.dependencies }.flatten().let { LinkedList(it) }
+            val dependencies: LinkedList<Dependency> = parents
+                .map { it.dependencies }
+                .flatten()
+                .map { it.reset() }
+                .let { LinkedList(it) }
+
             val parentsPriority: Int = parents.minOfOrNull { it.priority } ?: DEFAULT_PRIORITY
             val priority: Int = parentsPriority - 1
             val moduleConfig = Configuration(priority, dependencies).apply(config)
@@ -92,17 +97,19 @@ internal class Dependency
 private constructor(
     val key: String,
     val priority: Int,
-    constructor: () -> Any,
+    private val constructor: () -> Any,
 ): Comparable<Dependency> {
-    private val instance: LazyValue<Any> = LazyValue(constructor)
+    private val instance: Lazy<Any> = lazy(initializer = constructor)
 
     fun getInstance(): Any {
         return try {
-            instance()
+            instance.value
         } catch (e: Exception) {
             throw DependencyException(key, e)
         }
     }
+
+    fun reset(): Dependency = Dependency(key, priority, constructor)
 
     override fun toString(): String = key
 
