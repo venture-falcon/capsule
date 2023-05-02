@@ -19,6 +19,11 @@ dependencies {
     // Use the Kotlin JDK 8 standard library.
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 
+    // Logging
+    implementation("io.github.microutils:kotlin-logging-jvm:3.0.5")
+    testImplementation("net.logstash.logback:logstash-logback-encoder:7.3")
+    testImplementation("ch.qos.logback:logback-classic:1.4.6")
+
     // Use the Kotlin test library.
     testImplementation("org.jetbrains.kotlin:kotlin-test")
 
