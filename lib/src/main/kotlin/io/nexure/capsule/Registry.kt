@@ -26,9 +26,4 @@ internal class Registry(
 
         return Registry(dependencies)
     }
-
-    override fun toString(): String = dependencies.asSequence()
-        .map { it.value }
-        .flatten()
-        .joinToString(separator = "\n", prefix = "\n") { "- ${it.key}" }
 }
