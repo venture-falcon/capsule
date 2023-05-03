@@ -2,29 +2,18 @@ package io.nexure.capsule
 
 import mu.KotlinLogging
 import java.lang.reflect.Constructor
-import java.util.LinkedList
 
 private const val DEFAULT_PRIORITY: Int = Int.MAX_VALUE
 
 private val log = KotlinLogging.logger {}
 
-interface DependencyProvider {
-    fun <T : Any> tryGet(clazz: Class<T>): T?
-    fun <T : Any> get(clazz: Class<T>): T = tryGet(clazz) ?: throw DependencyException(clazz)
-    fun <T : Any> getMany(clazz: Class<T>): List<T>
-}
-
-inline fun <reified T : Any> DependencyProvider.get(): T = get(T::class.java)
-inline fun <reified T : Any> DependencyProvider.tryGet(): T? = tryGet(T::class.java)
-inline fun <reified T : Any> DependencyProvider.getMany(): List<T> = getMany(T::class.java)
-
 @Suppress("UNCHECKED_CAST")
 open class Capsule
 private constructor(
     private val priority: Int = DEFAULT_PRIORITY,
-    private val dependencies: List<Dependency> = LinkedList()
+    private val dependencies: Registry = Registry()
 ) : DependencyProvider {
-    constructor(): this(Int.MAX_VALUE, LinkedList())
+    constructor(): this(Int.MAX_VALUE, Registry())
 
     override fun <T : Any> tryGet(clazz: Class<T>): T? =
         getDependencies(clazz).firstOrNull()?.let { it.getInstance(this) as T } ?: resolveImplicit(clazz)
@@ -45,15 +34,12 @@ private constructor(
 
     override fun <T : Any> getMany(clazz: Class<T>): List<T> = getDependencies(clazz).map { it.getInstance(this) as T }
 
-    private fun <T: Any> getDependencies(clazz: Class<T>): List<Dependency> {
-        val key: String = classKey(clazz)
-        return dependencies.filter { (it.key == key) }.sorted()
-    }
+    private fun <T: Any> getDependencies(clazz: Class<T>): List<Dependency> = dependencies.getDependencies(Key(clazz))
 
     class Configuration
     internal constructor(
         private val priority: Int,
-        internal val dependencies: LinkedList<Dependency>,
+        internal val dependencies: Registry,
     ) : Capsule(priority, dependencies) {
         inline fun <reified T : Any> register(noinline setup: DependencyProvider.() -> T) {
             val clazz: Class<T> = T::class.java
@@ -65,7 +51,7 @@ private constructor(
 
         fun <T : Any> register(clazz: Class<out T>, setup: DependencyProvider.() -> T) {
             val dependency = Dependency.fromClass(clazz, priority, setup)
-            dependencies.push(dependency)
+            dependencies.add(dependency)
         }
     }
 
@@ -84,12 +70,7 @@ private constructor(
             vararg parents: Capsule,
             config: Configuration.() -> Unit
         ): Capsule {
-            val dependencies: LinkedList<Dependency> = parents
-                .map { it.dependencies }
-                .flatten()
-                .map { it.copy() }
-                .let { LinkedList(it) }
-
+            val dependencies: Registry = parents.map { it.dependencies }.fold(Registry(), Registry::plus)
             val parentsPriority: Int = parents.minOfOrNull { it.priority } ?: DEFAULT_PRIORITY
             val priority: Int = parentsPriority - 1
             val moduleConfig = Configuration(priority, dependencies).apply(config)
@@ -99,50 +80,21 @@ private constructor(
     }
 }
 
-internal class Dependency
-private constructor(
-    val key: String,
-    val priority: Int,
-    private val constructor: DependencyProvider.() -> Any,
-): Comparable<Dependency> {
-    private val instance: Memoized<Any> = Memoized()
-
-    fun getInstance(provider: DependencyProvider): Any {
-        return try {
-            instance.getOnce {
-                provider.constructor()
-            }
-        } catch (e: Exception) {
-            throw DependencyException(key, e)
-        }
-    }
-
-    fun copy(): Dependency = Dependency(key, priority, constructor)
-
-    override fun toString(): String = key
-
-    override fun compareTo(other: Dependency): Int = this.priority.compareTo(other.priority)
-
-    companion object {
-        fun fromClass(clazz: Class<*>, priority: Int, constructor: DependencyProvider.() -> Any): Dependency {
-            return Dependency(key = classKey(clazz), priority = priority, constructor = constructor)
-        }
-    }
+data class Key(private val clazz: Class<*>) {
+    override fun toString(): String = clazz.canonicalName ?: clazz.descriptorString()
 }
 
-private fun classKey(clazz: Class<*>): String = clazz.canonicalName ?: clazz.descriptorString()
-
 internal class DependencyException(
-    val key: String,
+    val key: Key,
     override val cause: Exception? = null
 ) : Exception() {
-    constructor(clazz: Class<*>, cause: Exception? = null) : this(classKey(clazz), cause)
+    constructor(clazz: Class<*>, cause: Exception? = null) : this(Key(clazz), cause)
 
     fun children(): List<String> {
         val childClasses: List<String> =
             if (cause is DependencyException) cause.children() else emptyList()
 
-        return listOf(key) + childClasses
+        return listOf(key.toString()) + childClasses
     }
 
     override val message: String =
