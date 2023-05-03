@@ -185,7 +185,7 @@ class CapsuleTest {
     }
 
     @Test
-    fun `adding new dependency of same interface should invoke a reset`() {
+    fun `creating a new inheriting capsule should invoke a reset of instantiated types`() {
         val parent = Capsule {
             register<Greeter> { FirstImpl() }
             register { GreeterService(get()) }
