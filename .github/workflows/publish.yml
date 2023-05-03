@@ -3,6 +3,7 @@ on:
   release:
     types:
       - released
+      - prereleased
 
 concurrency:
   group: release
