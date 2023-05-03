@@ -1,11 +1,8 @@
 package io.nexure.capsule
 
-import mu.KotlinLogging
 import java.lang.reflect.Constructor
 
 private const val DEFAULT_PRIORITY: Int = Int.MAX_VALUE
-
-private val log = KotlinLogging.logger {}
 
 @Suppress("UNCHECKED_CAST")
 open class Capsule
@@ -15,8 +12,10 @@ private constructor(
 ) : DependencyProvider {
     constructor(): this(Int.MAX_VALUE, Registry())
 
-    override fun <T : Any> tryGet(clazz: Class<T>): T? =
-        getDependencies(clazz).firstOrNull()?.let { it.getInstance(this) as T } ?: resolveImplicit(clazz)
+    override fun <T : Any> tryGet(clazz: Class<T>): T? = resolveExplicit(clazz) ?: resolveImplicit(clazz)
+
+    private fun <T : Any> resolveExplicit(clazz: Class<T>): T? =
+        getDependencies(clazz).firstOrNull()?.let { it.getInstance(this) as T }
 
     private fun <T : Any> resolveImplicit(clazz: Class<T>): T? {
         if (clazz in forbiddenImplicit) {
@@ -74,7 +73,6 @@ private constructor(
             val parentsPriority: Int = parents.minOfOrNull { it.priority } ?: DEFAULT_PRIORITY
             val priority: Int = parentsPriority - 1
             val moduleConfig = Configuration(priority, dependencies).apply(config)
-            log.debug { "Capsule created with dependencies: ${moduleConfig.dependencies}" }
             return Capsule(priority, moduleConfig.dependencies)
         }
     }
