@@ -185,6 +185,22 @@ class CapsuleTest {
     }
 
     @Test
+    fun `creating a new inheriting capsule should invoke a reset of instantiated types`() {
+        val parent = Capsule {
+            register<Greeter> { FirstImpl() }
+            register { GreeterService(get()) }
+        }
+
+        assertEquals("first", parent.get<GreeterService>().greet())
+
+        val child = Capsule(parent) {
+            register<Greeter> { SecondImpl() }
+        }
+
+        assertEquals("second", child.get<GreeterService>().greet())
+    }
+
+    @Test
     fun `DependencyException should provide context on which class creation that failed`() {
         try {
             val capsule = Capsule {}
@@ -234,4 +250,16 @@ class GrandParent(val parent: Parent)
 
 interface Greeter {
     fun hello(): String
+}
+
+class GreeterService(private val greeter: Greeter) {
+    fun greet(): String = greeter.hello()
+}
+
+class FirstImpl : Greeter {
+    override fun hello(): String = "first"
+}
+
+class SecondImpl : Greeter {
+    override fun hello(): String = "second"
 }

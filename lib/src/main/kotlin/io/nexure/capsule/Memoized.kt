@@ -2,18 +2,15 @@ package io.nexure.capsule
 
 import java.util.concurrent.Semaphore
 
-class LazyValue<T>(private val creation: () -> T) {
+internal class Memoized<T> {
     private val semaphore = Semaphore(1)
     private var value: T? = null
 
-    fun get(): T {
+    fun getOnce(creation: () -> T): T {
         if (semaphore.tryAcquire()) {
             this.value = creation()
         }
         return this.value!!
     }
-
-    operator fun invoke(): T = get()
 }
 
-inline fun <reified T : Any> lazy(noinline creation: () -> T): LazyValue<T> = LazyValue(creation)
