@@ -101,22 +101,17 @@ but when we use `register(ClientImpl::class.java)` we are saying that only
 This may be useful if you have a class that implements many interfaces, and for some reason you only
 want capsule to consider it for one or some of those interfaces.
 
-It is also possible to combine several capsules. For example, you might have a capsule with "common"
-dependencies which will always be used regardless of context, and then there might be a test capsule
+It is also possible to combine several capsules. For example, you might have a capsule with "default"
+dependencies which will always be used unless overridden, and then there might be a test capsule
 that contains mocks or dependencies which you only wants to use when running tests.
 
 This can be setup like this
 ```kotlin
-val common = Capsule {
-    // Register dependencies that will be used in all contexts
+val default = Capsule {
+    // Register "default" dependencies that will always be used, unless they are explictly overriden
 }
 
-val primary = Capsule(common) {
-    // Register dependencies that will only be used in live environment
-    // These dependencies can in turn depend on dependencies which were set up in the common capsule 
-}
-
-val test = Capsule(common) {
+val test = Capsule(default) {
     // Register dependencies which you may only want to use in tests. This should preferably
     // be set up in such way that it cannot be accessible from your regular code, only by your tests
 }
