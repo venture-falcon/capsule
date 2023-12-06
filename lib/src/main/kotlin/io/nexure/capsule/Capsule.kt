@@ -1,5 +1,6 @@
 package io.nexure.capsule
 
+import java.lang.InstantiationException
 import java.lang.reflect.Constructor
 
 private const val DEFAULT_PRIORITY: Int = Int.MAX_VALUE
@@ -23,12 +24,15 @@ private constructor(
         }
         val constructor: Constructor<*> =
             clazz.constructors.minByOrNull { it.parameterCount } ?: return null
-        val parameters: Array<*> = try {
-            constructor.parameters.map { get(it.type) }.toTypedArray()
+
+        return try {
+            val parameters: Array<*> = constructor.parameters.map { get(it.type) }.toTypedArray()
+            constructor.newInstance(*parameters) as? T
         } catch (e: DependencyException) {
             throw DependencyException(clazz, e)
+        } catch (e: InstantiationException) {
+            throw DependencyException(clazz, e)
         }
-        return constructor.newInstance(*parameters) as? T
     }
 
     override fun <T : Any> getMany(clazz: Class<T>): List<T> = getDependencies(clazz).map { it.getInstance(this) as T }
