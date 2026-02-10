@@ -1,53 +1,22 @@
-val jvmVersion = 21
-
 plugins {
-    // Apply the org.jetbrains.kotlin.jvm Plugin to add support for Kotlin.
-    id("org.jetbrains.kotlin.jvm") version "2.2.20"
-
-    // Apply the java-library plugin for API and implementation separation.
+    alias(libs.plugins.kotlin.jvm)
     `java-library`
     `maven-publish`
 }
 
 repositories {
-    // Use Maven Central for resolving dependencies.
     mavenCentral()
+    mavenLocal()
 }
 
 dependencies {
-    // Align versions of all Kotlin components
-    implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
-
-    // Use the Kotlin JDK 8 standard library.
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-
-    // Use the Kotlin test library.
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
-
-    // Use the Kotlin JUnit integration.
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
+    implementation(platform(libs.kotlin.bom))
+    implementation(libs.bundles.kotlin)
+    testImplementation(libs.bundles.test)
 }
 
-publishing {
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/venture-falcon/capsule")
-            credentials {
-                username = System.getenv("GPR_USER")
-                password = System.getenv("GPR_TOKEN")
-            }
-        }
-    }
-    publications {
-        register<MavenPublication>("gpr") {
-            groupId = "io.nexure"
-            artifactId = "capsule"
-            version = project.findProperty("versionId") as String?
-            from(components["java"])
-        }
-    }
-}
+
+kotlin { jvmToolchain(21) }
 
 java {
     sourceCompatibility = JavaVersion.VERSION_21
@@ -56,6 +25,27 @@ java {
     withSourcesJar()
 }
 
-kotlin {
-    jvmToolchain(jvmVersion)
+publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/venture-falcon/capsule")
+            credentials {
+                val user = properties["gpr.user"] ?: System.getenv("GPR_USER")
+                val token = properties["gpr.token"] ?: System.getenv("GPR_TOKEN")
+                username = requireNotNull(user.toString()) { "Found no username for GitHub packages access" }
+                password = requireNotNull(token.toString()) { "Found no token for GitHub packages access" }
+            }
+        }
+    }
+    publications {
+        register<MavenPublication>("gpr") {
+            groupId = "io.nexure"
+            artifactId = "capsule"
+            version = project.findProperty("versionId")?.toString() ?: "0.0.0-SNAPSHOT"
+            from(components["java"])
+        }
+    }
 }
+
+
