@@ -22,6 +22,9 @@ jobs:
             architecture: x64
       - name: Run tests
         run: ./gradlew test
+        env:
+            GPR_USER: ${{ secrets.GPR_USER }}
+            GPR_TOKEN: ${{ secrets.GPR_TOKEN }}
       - name: Publish to GitHub package registry
         run: ./gradlew publish -PversionId=${{ github.event.release.tag_name }}
         env:
